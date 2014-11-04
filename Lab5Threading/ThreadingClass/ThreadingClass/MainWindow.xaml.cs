@@ -89,13 +89,6 @@ namespace ThreadingClass
 
             foreach (var func in functions)
             {
-                new Thread(_ =>
-                    {
-                        Interlocked.Add(ref _result, func());
-                        if (Interlocked.Decrement(ref scheduled) == 0)
-                            WriteResult(Res2, sender);
-                    })
-                    .Start();
             }
             
         }
@@ -108,12 +101,6 @@ namespace ThreadingClass
 
             foreach (var func in functions)
             {
-                ThreadPool.QueueUserWorkItem(_ =>
-                    {
-                    Interlocked.Add(ref _result, func());
-                    if (Interlocked.Decrement(ref scheduled) == 0)
-                        WriteResult(Res3, sender);
-                    }, null);
             }
         }
 
@@ -122,18 +109,6 @@ namespace ThreadingClass
             ResetTimeAndResult(sender);
             var functions = DataHelper.FindStringCountActions(_data, _searchTerm, _processingTime, ConcurrencyLevel);
             int scheduled = functions.Count;
-
-            List<Task<int>> tasks = new List<Task<int>>();
-            foreach(var func in functions)
-            {
-                tasks.Add(Task.Factory.StartNew(func)); 
-            }
-
-            Task.Factory.ContinueWhenAll(tasks.ToArray(), completed => 
-                {
-                    _result = completed.Sum(t => t.Result);
-                    WriteResult(Res4, sender);
-                });
         }
 
         private void btnClassicApm_Click(object sender, RoutedEventArgs e)
