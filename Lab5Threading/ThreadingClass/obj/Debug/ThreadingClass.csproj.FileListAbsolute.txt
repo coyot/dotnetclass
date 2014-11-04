@@ -1,0 +1,1 @@
+C:\sources\github\dotnetclass\Lab5Threading\ThreadingClass\bin\Debug\ThreadingClass.exe.config
