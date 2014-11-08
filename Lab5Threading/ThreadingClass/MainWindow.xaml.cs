@@ -89,8 +89,14 @@ namespace ThreadingClass
 
             foreach (var func in functions)
             {
-            }
-            
+                new Thread(() =>
+                    {
+                        Interlocked.Add(ref _result, func());
+                        if (Interlocked.Decrement(ref scheduled) == 0)
+                            WriteResult(Res2, sender);
+                    })
+                    .Start();
+            }            
         }
 
         private void btnThredPool_Click(object sender, RoutedEventArgs e)
@@ -101,6 +107,12 @@ namespace ThreadingClass
 
             foreach (var func in functions)
             {
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    Interlocked.Add(ref _result, func());
+                    if (Interlocked.Decrement(ref scheduled) == 0)
+                        WriteResult(Res3, sender);
+                });
             }
         }
 
@@ -108,12 +120,29 @@ namespace ThreadingClass
         {
             ResetTimeAndResult(sender);
             var functions = DataHelper.FindStringCountActions(_data, _searchTerm, _processingTime, ConcurrencyLevel);
-            int scheduled = functions.Count;
+            List<Task<int>> tasks = new List<Task<int>>();
+            foreach (var function in functions)
+            {
+                tasks.Add(Task.Factory.StartNew(function));
+            }
+            Task.WhenAll(tasks).ContinueWith(t => _result = t.Result.Sum()).ContinueWith(t => WriteResult(Res4, sender));
         }
 
         private void btnClassicApm_Click(object sender, RoutedEventArgs e)
         {
+            ResetTimeAndResult(sender);
+            var functions = DataHelper.FindStringCountActions(_data, _searchTerm, _processingTime, ConcurrencyLevel);
+            int scheduled = functions.Count;
 
+            foreach (var function in functions)
+            {
+                function.BeginInvoke(ar =>
+                    {
+                        Interlocked.Add(ref _result, function.EndInvoke(ar));
+                        if (Interlocked.Decrement(ref scheduled) == 0)
+                            WriteResult(Res5, sender);
+                    }, null);
+            }
         }
    
     }
