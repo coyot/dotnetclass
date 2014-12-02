@@ -89,6 +89,7 @@ namespace ThreadingClass
 
             foreach (var func in functions)
             {
+<<<<<<< HEAD
                 ThreadStart function = () =>
                     {
                         int foundStrings = func();
@@ -104,6 +105,16 @@ namespace ThreadingClass
                 th.Start();
             }
             
+=======
+                new Thread(() =>
+                    {
+                        Interlocked.Add(ref _result, func());
+                        if (Interlocked.Decrement(ref scheduled) == 0)
+                            WriteResult(Res2, sender);
+                    })
+                    .Start();
+            }            
+>>>>>>> origin/master
         }
 
         private void btnThredPool_Click(object sender, RoutedEventArgs e)
@@ -114,6 +125,7 @@ namespace ThreadingClass
 
             foreach (var func in functions)
             {
+<<<<<<< HEAD
                 WaitCallback function = _ =>
                     {
                         int foundStrings = func();
@@ -127,6 +139,14 @@ namespace ThreadingClass
                     };
 
                 ThreadPool.QueueUserWorkItem(function, null);
+=======
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    Interlocked.Add(ref _result, func());
+                    if (Interlocked.Decrement(ref scheduled) == 0)
+                        WriteResult(Res3, sender);
+                });
+>>>>>>> origin/master
             }
         }
 
@@ -134,6 +154,7 @@ namespace ThreadingClass
         {
             ResetTimeAndResult(sender);
             var functions = DataHelper.FindStringCountActions(_data, _searchTerm, _processingTime, ConcurrencyLevel);
+<<<<<<< HEAD
             int scheduled = functions.Count;
             List<Task<int>> tasks = new List<Task<int>>();
             foreach (Func<int> function in functions)
@@ -144,11 +165,31 @@ namespace ThreadingClass
             Task.WhenAll<int>(tasks)
                 .ContinueWith(partialTasks => _result = partialTasks.Result.Sum())
                 .ContinueWith(result => WriteResult(Res4, sender));
+=======
+            List<Task<int>> tasks = new List<Task<int>>();
+            foreach (var function in functions)
+            {
+                tasks.Add(Task.Factory.StartNew(function));
+            }
+            Task.WhenAll(tasks).ContinueWith(t => _result = t.Result.Sum()).ContinueWith(t => WriteResult(Res4, sender));
+>>>>>>> origin/master
         }
 
         private void btnClassicApm_Click(object sender, RoutedEventArgs e)
         {
+            ResetTimeAndResult(sender);
+            var functions = DataHelper.FindStringCountActions(_data, _searchTerm, _processingTime, ConcurrencyLevel);
+            int scheduled = functions.Count;
 
+            foreach (var function in functions)
+            {
+                function.BeginInvoke(ar =>
+                    {
+                        Interlocked.Add(ref _result, function.EndInvoke(ar));
+                        if (Interlocked.Decrement(ref scheduled) == 0)
+                            WriteResult(Res5, sender);
+                    }, null);
+            }
         }
    
     }
